@@ -1,6 +1,7 @@
 #ifndef FANN_CPP_H_INCLUDED
 #define FANN_CPP_H_INCLUDED
 
+#include <memory>
 /*
  *
  *  Fast Artificial Neural Network (fann) C++ Wrapper
@@ -656,35 +657,32 @@ namespace FANN
             unsigned int num_input, fann_type **input,
             unsigned int num_output, fann_type **output)
         {
-            // Uses the allocation method used in fann
-            struct fann_train_data *data =
-                (struct fann_train_data *)malloc(sizeof(struct fann_train_data));
-            data->input = (fann_type **)calloc(num_data, sizeof(fann_type *));
-            data->output = (fann_type **)calloc(num_data, sizeof(fann_type *));
+            set_train_data(fann_create_train_pointer_array(num_data, num_input, input, num_output, output));
+        }
 
-            data->num_data = num_data;
-            data->num_input = num_input;
-            data->num_output = num_output;
+        /* Method: set_train_data
 
-        	fann_type *data_input = (fann_type *)calloc(num_input*num_data, sizeof(fann_type));
-        	fann_type *data_output = (fann_type *)calloc(num_output*num_data, sizeof(fann_type));
+            Set the training data to the input and output data provided.
 
-            for (unsigned int i = 0; i < num_data; ++i)
-            {
-                data->input[i] = data_input;
-                data_input += num_input;
-                for (unsigned int j = 0; j < num_input; ++j)
-                {
-                    data->input[i][j] = input[i][j];
-                }
-                data->output[i] = data_output;
-		        data_output += num_output;
-                for (unsigned int j = 0; j < num_output; ++j)
-                {
-                    data->output[i][j] = output[i][j];
-                }
-            }
-            set_train_data(data);
+            A copy of the data is made so there are no restrictions on the
+            allocation of the input/output data and the caller is responsible
+            for the deallocation of the data pointed to by input and output.
+
+           Parameters:
+             num_data      - The number of training data
+             num_input     - The number of inputs per training data
+             num_output    - The number of ouputs per training data
+             input      - The set of inputs (an array with the dimension num_data*num_input)
+             output     - The set of desired outputs (an array with the dimension num_data*num_output)
+
+            See also:
+                <get_input>, <get_output>
+        */
+        void set_train_data(unsigned int num_data,
+            unsigned int num_input, fann_type *input,
+            unsigned int num_output, fann_type *output)
+        {
+            set_train_data(fann_create_train_array(num_data, num_input, input, num_output, output));
         }
 
 private:
@@ -857,7 +855,7 @@ public:
 	    See also:
 	    		<copy_from_struct_fann>
         */
-	neural_net(const neural_net& other)
+	neural_net(const neural_net& other) : ann(NULL)
 	{
 	    copy_from_struct_fann(other.ann);
 	}
@@ -954,11 +952,15 @@ public:
         */ 
         bool create_standard(unsigned int num_layers, ...)
         {
+            std::unique_ptr<unsigned int[]> data(new unsigned int[num_layers]);
+
             va_list layers;
             va_start(layers, num_layers);
-            bool status = create_standard_array(num_layers,
-                reinterpret_cast<const unsigned int *>(layers));
+            for (unsigned int i=0; i<num_layers; i++)
+                data.get()[i] = va_arg(layers, unsigned int);
             va_end(layers);
+
+            bool status = create_standard_array(num_layers, data.get());
             return status;
         }
 
@@ -1004,11 +1006,16 @@ public:
         */
         bool create_sparse(float connection_rate, unsigned int num_layers, ...)
         {
+            std::unique_ptr<unsigned int[]> data(new unsigned int[num_layers]);
+
             va_list layers;
             va_start(layers, num_layers);
-            bool status = create_sparse_array(connection_rate, num_layers,
-                reinterpret_cast<const unsigned int *>(layers));
+            for (unsigned int i=0; i<num_layers; i++)
+                data.get()[i] = va_arg(layers, unsigned int);
             va_end(layers);
+
+            bool status = create_sparse_array(connection_rate, num_layers,
+                data.get());
             return status;
         }
 
@@ -1034,7 +1041,7 @@ public:
 
         /* Method: create_shortcut
 
-	        Creates a standard backpropagation neural network, which is not fully connected and which
+	        Creates a standard backpropagation neural network, which is fully connected and which
 	        also has shortcut connections.
 
  	        Shortcut connections are connections that skip layers. A fully connected network with shortcut 
@@ -1051,11 +1058,15 @@ public:
         */ 
         bool create_shortcut(unsigned int num_layers, ...)
         {
+            std::unique_ptr<unsigned int[]> data(new unsigned int[num_layers]);
+
             va_list layers;
             va_start(layers, num_layers);
-            bool status = create_shortcut_array(num_layers,
-                reinterpret_cast<const unsigned int *>(layers));
+            for (unsigned int i=0; i<num_layers; i++)
+                data.get()[i] = va_arg(layers, unsigned int);
             va_end(layers);
+
+            bool status = create_shortcut_array(num_layers, data.get());
             return status;
         }
 
@@ -2637,13 +2648,97 @@ public:
 
            More info available in <get_learning_momentum>
 
-           This function appears in FANN >= 2.0.0.   	
+           This function appears in FANN >= 2.0.0.      
          */ 
         void set_learning_momentum(float learning_momentum)
         {
             if (ann != NULL)
             {
                 fann_set_learning_momentum(ann, learning_momentum);
+            }
+        }
+
+        /* Method: get_learning_l1_norm
+
+           Get the learning l1 norm.
+           
+           The learning l1 norm can be used to regulate FANN::TRAIN_INCREMENTAL training.
+           A too high l1 norm will however not benefit training. Setting l1 norm to 0 will
+           be the same as not using the l1 norm parameter. The recommended value of this parameter
+           is between 0.0 and 1.0.
+
+           The default l1 norm is 0.
+           
+           See also:
+           <set_learning_l1_norm>, <set_training_algorithm>
+
+           This function appears in FANN >= 2.0.0.      
+         */ 
+        float get_learning_l1_norm()
+        {
+            float learning_l1_norm = 0.0f;
+            if (ann != NULL)
+            {
+                learning_l1_norm = fann_get_learning_l1_norm(ann);
+            }
+            return learning_l1_norm;
+        }
+
+        /* Method: set_learning_l1_norm
+
+           Set the learning l1 norm.
+
+           More info available in <get_learning_l1_norm>
+
+           This function appears in FANN >= 2.0.0.   	
+         */ 
+        void set_learning_l1_norm(float learning_l1_norm)
+        {
+            if (ann != NULL)
+            {
+                fann_set_learning_l1_norm(ann, learning_l1_norm);
+            }
+        }
+
+        /* Method: get_learning_l2_norm
+
+           Get the learning l2 norm.
+           
+           The learning l2 norm can be used to regulate FANN::TRAIN_INCREMENTAL training.
+           A too high l2 norm will however not benefit training. Setting l2 norm to 1.0 will
+           be the same as not using the l2 norm parameter. The recommended value of this parameter
+           is between 0.0 and 1.0.
+
+           The default l2 norm is 0.
+           
+           See also:
+           <set_learning_l2_norm>, <set_training_algorithm>
+
+           This function appears in FANN >= 2.0.0.      
+         */ 
+        float get_learning_l2_norm()
+        {
+            float learning_l2_norm = 1.0f;
+            if (ann != NULL)
+            {
+                learning_l2_norm = fann_get_learning_l2_norm(ann);
+            }
+            return learning_l2_norm;
+        }
+
+        /* Method: set_learning_l2_norm
+
+           Set the learning l2 norm.
+
+           More info available in <get_learning_l2_norm>
+
+           This function appears in FANN >= 2.0.0.      
+         */ 
+        void set_learning_l2_norm(float learning_l2_norm)
+        {
+            if (ann != NULL)
+            {
+                fann_set_learning_l2_norm(ann, learning_l2_norm);
             }
         }
 
@@ -2656,7 +2751,7 @@ public:
            The default stop function is FANN::STOPFUNC_MSE
            
            See also:
-   	        <get_train_stop_function>, <get_bit_fail_limit>
+            <get_train_stop_function>, <get_bit_fail_limit>
               
            This function appears in FANN >= 2.0.0.
          */ 
@@ -3679,7 +3774,7 @@ public:
                 data.train_data = train;
 
                 int result = (*user_data->user_callback)(*user_data->net,
-                    data, max_epochs, epochs_between_reports, desired_error, epochs, user_data);
+                    data, max_epochs, epochs_between_reports, desired_error, epochs, user_data->user_data);
 
                 data.train_data = NULL; // Prevent automatic cleanup
                 return result;

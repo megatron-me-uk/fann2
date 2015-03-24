@@ -143,7 +143,7 @@ static char const *const FANN_TRAIN_NAMES[] = {
 	 * y = tanh(s*x) = 2/(1 + exp(-2*s*x)) - 1
 	 * d = s*(1-(y*y))
 
-   FANN_SIGMOID_SYMMETRIC - Stepwise linear approximation to symmetric sigmoid.
+   FANN_SIGMOID_SYMMETRIC_STEPWISE - Stepwise linear approximation to symmetric sigmoid.
 	 * Faster than symmetric sigmoid but a bit less precise.
 
    FANN_GAUSSIAN - Gaussian activation function.
@@ -435,7 +435,7 @@ struct fann_layer
 {
 	/* A pointer to the first neuron in the layer 
 	 * When allocated, all the neurons in all the layers are actually
-	 * in one long array, this is because we wan't to easily clear all
+	 * in one long array, this is because we want to easily clear all
 	 * the neurons at once.
 	 */
 	struct fann_neuron *first_neuron;
@@ -489,6 +489,10 @@ struct fann
 
 	/* The learning momentum used for backpropagation algorithm. */
 	float learning_momentum;
+
+        /* The learning regularisations used for backpropagation algorithm. */
+        float learning_l1_norm;
+        float learning_l2_norm;
 
 	/* the connection rate of the network
 	 * between 0 and 1, 1 meaning fully connected

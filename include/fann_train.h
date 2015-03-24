@@ -257,11 +257,43 @@ FANN_EXTERNAL struct fann_train_data *FANN_API fann_read_train_from_file(const c
   
    See also:
      <fann_read_train_from_file>, <fann_train_on_data>, <fann_destroy_train>,
-     <fann_save_train>
+     <fann_save_train>, <fann_create_train_array>
 
     This function appears in FANN >= 2.2.0
 */ 
 FANN_EXTERNAL struct fann_train_data * FANN_API fann_create_train(unsigned int num_data, unsigned int num_input, unsigned int num_output);
+
+/* Function: fann_create_train_pointer_array
+   Creates an training data struct and fills it with data from provided arrays of pointer.
+  
+   A copy of the data is made so there are no restrictions on the
+   allocation of the input/output data and the caller is responsible
+   for the deallocation of the data pointed to by input and output.
+
+   See also:
+     <fann_read_train_from_file>, <fann_train_on_data>, <fann_destroy_train>,
+     <fann_save_train>, <fann_create_train>, <fann_create_train_array>
+
+    This function appears in FANN >= 2.3.0
+*/ 
+FANN_EXTERNAL struct fann_train_data * FANN_API fann_create_train_pointer_array(unsigned int num_data, unsigned int num_input, fann_type **input, unsigned int num_output, fann_type **output);
+
+/* Function: fann_create_train_array
+   Creates an training data struct and fills it with data from provided arrays, where the arrays must have the dimensions:
+   input[num_data*num_input]
+   output[num_data*num_output]
+
+   A copy of the data is made so there are no restrictions on the
+   allocation of the input/output data and the caller is responsible
+   for the deallocation of the data pointed to by input and output.
+
+   See also:
+     <fann_read_train_from_file>, <fann_train_on_data>, <fann_destroy_train>,
+     <fann_save_train>, <fann_create_train>, <fann_create_train_pointer_array>
+
+    This function appears in FANN >= 2.3.0
+*/ 
+FANN_EXTERNAL struct fann_train_data * FANN_API fann_create_train_array(unsigned int num_data, unsigned int num_input, fann_type *input, unsigned int num_output, fann_type *output);
 
 /* Function: fann_create_train_from_callback
    Creates the training data struct from a user supplied function.
@@ -304,6 +336,26 @@ FANN_EXTERNAL struct fann_train_data * FANN_API fann_create_train_from_callback(
     This function appears in FANN >= 1.0.0
  */ 
 FANN_EXTERNAL void FANN_API fann_destroy_train(struct fann_train_data *train_data);
+
+/* Function: fann_get_train_input
+   Gets the training input data at the given position
+
+   See also:
+     <fann_get_train_output>
+
+   This function appears in FANN >= 2.3.0
+ */ 
+FANN_EXTERNAL fann_type * FANN_API fann_get_train_input(struct fann_train_data * data, unsigned int position);
+
+/* Function: fann_get_train_output
+   Gets the training output data at the given position
+
+   See also:
+     <fann_get_train_output>
+
+   This function appears in FANN >= 2.3.0
+ */ 
+FANN_EXTERNAL fann_type * FANN_API fann_get_train_output(struct fann_train_data * data, unsigned int position);
 
 
 /* Function: fann_shuffle_train_data
@@ -351,7 +403,7 @@ FANN_EXTERNAL void FANN_API fann_descale_train( struct fann *ann, struct fann_tr
    Calculate input scaling parameters for future use based on training data.
    
    Parameters:
-   	 ann           - ann for wgich parameters needs to be calculated
+   	 ann           - ann for which parameters needs to be calculated
    	 data          - training data that will be used to calculate scaling parameters
    	 new_input_min - desired lower bound in input data after scaling (not strictly followed)
    	 new_input_max - desired upper bound in input data after scaling (not strictly followed)
@@ -372,10 +424,10 @@ FANN_EXTERNAL int FANN_API fann_set_input_scaling_params(
    Calculate output scaling parameters for future use based on training data.
    
    Parameters:
-   	 ann            - ann for wgich parameters needs to be calculated
+   	 ann            - ann for which parameters needs to be calculated
    	 data           - training data that will be used to calculate scaling parameters
-   	 new_output_min - desired lower bound in input data after scaling (not strictly followed)
-   	 new_output_max - desired upper bound in input data after scaling (not strictly followed)
+   	 new_output_min - desired lower bound in output data after scaling (not strictly followed)
+   	 new_output_max - desired upper bound in output data after scaling (not strictly followed)
    	 
    See also:
    	 <fann_set_input_scaling_params>
@@ -393,12 +445,12 @@ FANN_EXTERNAL int FANN_API fann_set_output_scaling_params(
    Calculate input and output scaling parameters for future use based on training data.
 
    Parameters:
-   	 ann            - ann for wgich parameters needs to be calculated
+   	 ann            - ann for which parameters needs to be calculated
    	 data           - training data that will be used to calculate scaling parameters
    	 new_input_min  - desired lower bound in input data after scaling (not strictly followed)
    	 new_input_max  - desired upper bound in input data after scaling (not strictly followed)
-   	 new_output_min - desired lower bound in input data after scaling (not strictly followed)
-   	 new_output_max - desired upper bound in input data after scaling (not strictly followed)
+   	 new_output_min - desired lower bound in output data after scaling (not strictly followed)
+   	 new_output_max - desired upper bound in output data after scaling (not strictly followed)
    	 
    See also:
    	 <fann_set_input_scaling_params>, <fann_set_output_scaling_params>
@@ -714,7 +766,63 @@ FANN_EXTERNAL float FANN_API fann_get_learning_momentum(struct fann *ann);
  */ 
 FANN_EXTERNAL void FANN_API fann_set_learning_momentum(struct fann *ann, float learning_momentum);
 
+/* Function: fann_get_learning_l1_norm
 
+   Get the learning l1 norm.
+   
+   The learning l1 norm can be used to regulate FANN_TRAIN_INCREMENTAL training.
+   A too high l1 norm will however not benefit training. Setting l1 norm to 0 will
+   be the same as not using the l1 norm parameter. The recommended value of this parameter
+   is between 0.0 and 1.0.
+
+   The default l1 norm is 0.
+   
+   See also:
+   <fann_set_learning_l1_norm>, <fann_set_training_algorithm>
+
+   This function appears in FANN >= 2.0.0.    
+ */ 
+FANN_EXTERNAL float FANN_API fann_get_learning_l1_norm(struct fann *ann);
+
+
+/* Function: fann_set_learning_l1_norm
+
+   Set the learning l1 norm.
+
+   More info available in <fann_get_learning_l1_norm>
+
+   This function appears in FANN >= 2.0.0.    
+ */ 
+FANN_EXTERNAL void FANN_API fann_set_learning_l1_norm(struct fann *ann, float learning_l1_norm);
+
+/* Function: fann_get_learning_l2_norm
+
+   Get the learning l2 norm.
+   
+   The learning l2 norm can be used to regulate FANN_TRAIN_INCREMENTAL training.
+   A too high l2 norm will however not benefit training. Setting l2 norm to 1.0 will
+   be the same as not using the l2 norm parameter. The recommended value of this parameter
+   is between 0.0 and 1.0.
+
+   The default l2 norm is 1.0.
+   
+   See also:
+   <fann_set_learning_l2_norm>, <fann_set_training_algorithm>
+
+   This function appears in FANN >= 2.0.0.    
+ */ 
+FANN_EXTERNAL float FANN_API fann_get_learning_l2_norm(struct fann *ann);
+
+
+/* Function: fann_set_learning_l2_norm
+
+   Set the learning l2 norm.
+
+   More info available in <fann_get_learning_l2_norm>
+
+   This function appears in FANN >= 2.0.0.    
+ */ 
+FANN_EXTERNAL void FANN_API fann_set_learning_l2_norm(struct fann *ann, float learning_l2_norm);
 /* Function: fann_get_activation_function
 
    Get the activation function for neuron number *neuron* in layer number *layer*, 
